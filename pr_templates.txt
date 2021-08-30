@@ -1,0 +1,99 @@
+PR #1: Resolves: Add native GitHub security and versioning dependency alerts
+
+- add `dependabot.yml` which automatically enables Dependabot's dependency versioning scanner and dependency update PRs bot by declaring dependency ecosystems and sources in the project. For dependency security vulnerabilities scanner and vulnerable dependency update PRs bot, [enable "Dependabot alerts" and "Dependabot security updates"](https://docs.github.com/en/github/managing-security-vulnerabilities/configuring-dependabot-security-updates)
+
+- use the `target-branch` attribute, if you would like to run Dependabot's scan against a branch other than your default branch (for example if you have a separate development branch)
+
+- should you decide that certain people on your team should take care of the PRs that Dependabot creates, use the two attributes `assignees` and `reviewers` to automatically set personnel respectively.
+
+Resolves #
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+PR #2: Resolves: Add GitHub Codespaces configuration
+
+- ready-to-start GitHub Codespaces configuration with all necessary tooling
+
+- in addition, it provides basic tools for:
+  - .NET development
+  - GitHub support
+  - overall more pleasant VS Code experience
+  
+The configuration consists of:
+
+- `"image":` - a declaration of the Docker image that the Codespace container is created from (this is a list of images and code examples that [work with GitHub Codespaces](https://github.com/microsoft/vscode-dev-containers/tree/main/containers))
+  - `"mcr.microsoft.com/vscode/devcontainers/dotnet:0.201.9-5.0"` - the Codespace container runs from an Ubuntu 20.04 image with .NET Core SDK installed (`0.201.9` is the latest .NET Core SDK Docker image tagged version)
+
+- `"settings":` - a list of VS Code settings to be applied automatically after the Codespace container is created (.editorconfig overrides these)
+  - `"workbench.colorTheme": "Default Dark+"` - sets the theme of the VS Code workbench to the `Default Dark+` theme
+  - `"terminal.integrated.defaultProfile.linux": "pwsh"` - sets the default VS Code terminal to PowerShell Core
+
+- `extensions:` - a list of VS Code extensions that are automatically installed after the Codespace container is created
+  - `"coenraads.bracket-pair-colorizer"` - sets different colors for each nested pair of brackets
+  - `"vscode-icons-team.vscode-icons"` - provides a huge set of icons for the VS Code explorer
+  - `"editorconfig.editorconfig"` - attempts to override user/workspace settings with those in the .editorconfig
+  - `"eamodio.gitlens"` - provides git information directly inside the code
+  - `"cschleiden.vscode-github-actions"` and `"redhat.vscode-yaml"` - provide YAML and GitHub Actions support
+  - `"bierner.markdown-preview-github-styles"` and `"ban.spellright"` - provide assistance with writing Markdown documentation
+  - `"ms-dotnettools.csharp"` and `"VisualStudioExptTeam.vscodeintellicode"` - provide basic Visual Studio tooling
+  - `"ms-vscode.powershell"` - provides the functionality of Windows PowerShell ISE inside VS Code
+  - `"jmrog.vscode-nuget-package-manager"` - provides use of the NuGet library through the Command Palette
+  - `"dbaeumer.vscode-eslint"` - most popular linter for JS
+  - `"ms-vscode.vscode-typescript-next"` - JS and TS intellisense support
+  - `"ecmel.vscode-html-css"` - HTML `id` and `class` attribute completion
+  - `"ms-vscode.cpptools"` - adds language support for C/C++ to Visual Studio Code, including features such as IntelliSense and debugging.
+  
+- `"postCreateCommand"` - is a string of commands separated by `&&` that execute after the container has been built and the source code has been cloned
+
+- `"build"` - declares the Docker configuration that the container would use to run.
+
+- `Dockerfile`:
+  - `"mcr.microsoft.com/vscode/devcontainers/dotnet:0.201.9-5.0"` - the Codespace container runs from an Ubuntu 20.04 image with .NET Core SDK installed (`0.201.9` is the latest .NET Core SDK Docker image tagged version)
+  - Additional installed tools:
+    - Mono - required by some of the unit tests
+    - wget - used to install the .NET SDK
+    - .NET Core SDK 3.1 - required by some of the unit tests
+
+This GitHub Codespace configuration can also be used locally with the [Remote - Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension for VS Code. It automatically creates and runs a Docker container based on the `devcontainer.json` configuration inside the repo, so anyone could work on the project from any computer, without the need to install anything other than VS Code and Docker.
+
+Resolves #
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+PR #3: Resolves: Add native GitHub continuous code security and quality analysis
+
+- add `codeql-analysis.yml` which automatically enables CodeQL code security and quality scanner. It executes on every push commit (except those from Dependabot), PR, manually and every day at 8:00AM UTC. A scan check can be viewed on commits and PRs. All alerts and fix suggestion can be viewed at **Security** tab -> **Code scanning alerts** -> **CodeQL**
+
+Resolves #
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+PR #4: Resolves: Add a CI/CD pipeline with GitHub Actions
+
+### The pipeline runs:
+
+1. CI
+- automated GitHub tag bumping based on commit message
+- build and unit tests validation
+- artifacts generation
+- uploading artifacts to pipeline run (checkout the PR run of the pipeline for artifact download)
+
+2. CD
+- deployment to production
+- GitHub Release with asset attachment - [example test release]()
+
+Checkout the `docs/CI-CD_DOCUMENTATION/CI-CD_DOCUMENTATION.md` for information on setup and use of the CI/CD pipelines.
+
+### File changes:
+
+### Additions:
+
+We would like to add Continuous Deployment as well, however we know there are internal procedures often incorporated with Microsoft projects for the packaging, so we wanted to confirm first if what we have as an idea is desirable. The CD would include:
+- commit-based automated versioning
+- NuGet package generation and signing
+- deployment to NuGet.org
+- creation of GitHub Release
+
+Please let us know if anything could be done better and/or if any other automation is required by the project! We would be happy to improve it to satisfactory completion 🙂  
+
+Resolves #

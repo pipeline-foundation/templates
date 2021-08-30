@@ -1,0 +1,63 @@
+ISSUE #1: Add native GitHub security and versioning dependency alerts
+
+- [Dependabot](https://dependabot.com/) alerts on updates for the project's dated and vulnerable dependencies and automatically creates PRs to easily update them
+
+Pipeline Foundation is **a non-profit initiative** with the sole purpose of giving back to the IT community by assisting OSS projects with DevOps implementations and best practices.
+
+Built with ❤ by [Pipeline Foundation](https://pipeline.foundation).
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+ISSUE #2: Add GitHub Codespaces configuration
+
+- [GitHub Codespaces](https://github.com/features/codespaces) is a configurable cloud development environment available in your browser on GitHub or through Visual Studio Code.
+
+Pipeline Foundation is **a non-profit initiative** with the sole purpose of giving back to the IT community by assisting OSS projects with DevOps implementations and best practices.
+
+Built with ❤ by [Pipeline Foundation](https://pipeline.foundation).
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+ISSUE #3: Add native GitHub continuous code security and quality analysis
+
+- [CodeQL](https://github.com/github/codeql) is an open source code scanning tool for discovering vulnerabilities across a codebase
+
+Pipeline Foundation is **a non-profit initiative** with the sole purpose of giving back to the IT community by assisting OSS projects with DevOps implementations and best practices.
+
+Built with ❤ by [Pipeline Foundation](https://pipeline.foundation).
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+ISSUE #4: Add a CI/CD pipeline with GitHub Actions
+
+- Create a pipeline for Continuous Integration (build and test validation, test log generation, assemblies and packages generation) and Continuous Deployment (GitHub release creation, deployment to production) with GitHub Actions
+
+Pipeline Foundation is **a non-profit initiative** with the sole purpose of giving back to the IT community by assisting OSS projects with DevOps implementations and best practices.
+
+Built with ❤ by [Pipeline Foundation](https://pipeline.foundation).
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+ISSUE #5: Consolidate ... pipelines into a GitHub Actions pipeline
+
+A single GitHub Actions pipeline for all the required automated processes to eliminate potentially unnecessary overhead of maintaining several separate automation systems.
+
+We can start working on this promptly, just please let us know if you are interested in the implementation of the idea 🙂 
+
+Built with ❤ by [Pipeline Foundation](https://pipeline.foundation).
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+ISSUE #6: Migrate ... to a GitHub Actions pipeline
+
+Migrate the ... pipeline to a single GitHub Actions pipeline for all the required automated processes with the addition of some other automation ideas, written as pseudo code in the pipeline in the connected PR.
+
+We can start working on this promptly, just please let us know if you are interested in the implementation of the idea 🙂
+
+Check out quick video presentations of our latest DevOps contributions to the [Notepads](https://www.youtube.com/watch?v=StzaanSf99k) and [MimeKit](https://www.youtube.com/watch?v=jtiaXUkHEl8) projects, to get an idea of what we would like to contribute to ...
+
+Pipeline Foundation is **a non-profit initiative** with the sole purpose of giving back to the IT community by assisting OSS projects with DevOps implementations and best practices.
+
+Built with ❤ by [Pipeline Foundation](https://pipeline.foundation).
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
