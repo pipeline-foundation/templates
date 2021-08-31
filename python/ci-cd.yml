@@ -1,0 +1,23 @@
+name: CI/CD Pipeline
+
+on: [ push, pull_request, workflow_dispatch ]
+
+jobs:
+  ci:
+    name: Continuous Integration
+    runs-on: ubuntu-latest
+    env:
+      testResultsFolderName: Test results
+      publishOutputFolderName: Publish output
+      nugetPackagesFolderName: NuGet packages
+    outputs:
+      latest_version: ${{ steps.tag_generator.outputs.new_version }}
+      publishOutputFolderName: ${{ env.publishOutputFolderName }}
+      nugetPackagesFolderName: ${{ env.nugetPackagesFolderName }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+# Built with ❤ by [Pipeline Foundation](https://pipeline.foundation)
