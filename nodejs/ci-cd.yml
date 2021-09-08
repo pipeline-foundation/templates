@@ -3,7 +3,8 @@ name: CI/CD pipeline
 on: [ push, pull_request, workflow_dispatch ]
 
 jobs:
-  build:
+  ci:
+    name: Continuous Integration
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -80,8 +81,12 @@ jobs:
           curl https://raw.githubusercontent.com/Ariel-Rodriguez/sh-semversion-2/main/semver2.sh -o semver2.sh
           chmod +x semver2.sh
 
-          if [ `echo $(./semver2.sh $PACKAGE_VERSION_TAG $LATEST_GITHUB_TAG)` = 1 ]; then
+          if [ -z "$LATEST_GITHUB_TAG" ]; then
             SHOULD_DEPLOY="true"
+          else 
+            if [ `echo $(./semver2.sh $PACKAGE_VERSION_TAG $LATEST_GITHUB_TAG)` = 1 ]; then
+              SHOULD_DEPLOY="true"
+            fi
           fi
 
           echo "::set-output name=package_version::$(echo $PACKAGE_VERSION)"
@@ -115,9 +120,10 @@ jobs:
           name: Logs ${{ matrix.node-version }}
           path: logs/
 
-  deploy:
+  cd:
     if: needs.build.outputs.should_deploy == 'true'
-    needs: build
+    name: Continuous Deployment
+    needs: ci
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
