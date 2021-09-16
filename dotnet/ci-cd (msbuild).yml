@@ -5,7 +5,7 @@ on: [ push, pull_request, workflow_dispatch ]
 jobs:
   ci:
     name: Continuous Integration
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     outputs:
       latest_version: ${{ steps.tag_generator.outputs.new_version }}
     steps:
@@ -186,7 +186,7 @@ jobs:
     if: needs.ci.outputs.latest_version != ''
     name: Continuous Deployment
     needs: ci
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout repository # GH CLI requires a cloned repo
         uses: actions/checkout@v2

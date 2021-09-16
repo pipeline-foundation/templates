@@ -42,6 +42,8 @@ The configuration consists of:
   - `"ms-vscode.vscode-typescript-next"` - JS and TS intellisense support
   - `"ecmel.vscode-html-css"` - HTML `id` and `class` attribute completion
   - `"ms-vscode.cpptools"` - adds language support for C/C++ to Visual Studio Code, including features such as IntelliSense and debugging.
+  - `"ms-python.python"` and `"ms-python.vscode-pylance"` - provide full language support
+  - `"VisualStudioExptTeam.vscodeintellicode"` - the well known Visual Studio AI-assisted intellisense for VS Code
   
 - `"postCreateCommand"` - is a string of commands separated by `&&` that execute after the container has been built and the source code has been cloned
 
