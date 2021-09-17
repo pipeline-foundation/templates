@@ -77,6 +77,7 @@ PR #4: Resolves: Add a CI/CD pipeline with GitHub Actions
 1. CI
 - automated GitHub tag bumping based on commit message
 - build and unit tests validation
+- run GitHub's Advanced Security Compliance check
 - artifacts generation
 - uploading artifacts to pipeline run (checkout the PR run of the pipeline for artifact download)
 
