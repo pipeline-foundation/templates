@@ -136,6 +136,14 @@ jobs:
           name: pytest-log
           path: logs/pytest.log
 
+      # GitHub Advanced Security Compliance
+
+      - name: GHASC check # runs right before packaging to fail the pipeline if security issues are found
+        uses: GeekMasher/advanced-security-compliance@v1.5
+        with:
+          policy-path: policies/security-policy.yml
+          token: ${{ secrets.GHASC_TOKEN }} # token requires 'public_repo' and 'security_events' scopes
+
       # Package application
 
       - name: Package application

@@ -6,8 +6,15 @@ jobs:
   ci:
     name: Continuous Integration
     runs-on: ubuntu-20.04
+    env:
+      pathToSolution: Microsoft.Diagnostics.Runtime.sln
+      testResultsFolderName: Test results
+      publishOutputFolderName: Publish output
+      nugetPackagesFolderName: NuGet packages
     outputs:
       latest_version: ${{ steps.tag_generator.outputs.new_version }}
+      publishOutputFolderName: ${{ env.publishOutputFolderName }}
+      nugetPackagesFolderName: ${{ env.nugetPackagesFolderName }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -19,10 +26,7 @@ jobs:
       - name: Install .NET SDK
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 5.0.301
-
-      - name: Add MSBuild to PATH
-        uses: microsoft/setup-msbuild@v1
+          dotnet-version: 5.0.302
 
       # Information setup
 
@@ -92,51 +96,50 @@ jobs:
       - name: Restore solution
         shell: pwsh
         run: |
-          $pathToSolution = ""
+          $pathToSolution = "${{ env.pathToSolution }}"
 
-          nuget restore $pathToSolution
+          dotnet restore $pathToSolution
 
       - name: Build solution
         shell: pwsh
         run: |
-          $pathToSolution = ""
+          $pathToSolution = "${{ env.pathToSolution }}"
           $configurationSetting = "Debug"
-          $restorePackages = "false"
 
-          msbuild $pathToSolution `
-          /p:Configuration=$configurationSetting `
-          /p:RestorePackages=$restorePackages
+          dotnet build $pathToSolution `
+          --configuration $configurationSetting `
+          --no-restore
 
       - name: Run unit tests
         shell: pwsh
         run: |
-          $pathToUnitTestDLL = ""
+          $pathToSolution = "${{ env.pathToSolution }}"
           $configurationSetting = "Debug"
-          $projectName = "${{ github.event.repository.name }}"
-          $date = Get-Date -Format "MM-dd-yyyy"
-          $loggerAttributes = "trx;LogFileName=$projectName-$date.trx;verbosity=normal"
-          $testOutputFolder = "Test results"
+          $loggerAttributes = "trx;LogFilePath=TestResults.trx;verbosity=normal"
+          $testOutputFolder = "${{ env.testResultsFolderName }}"
 
-          dotnet test $pathToUnitTestDLL `
+          dotnet test $pathToSolution `
           --configuration $configurationSetting `
           --logger $loggerAttributes `
           --results-directory $testOutputFolder `
           --no-build
 
-      - name: Upload test results as pipeline artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: Test results
-          path: 'Test results/'
+      # GitHub Advanced Security Compliance
 
-      # Artifact generation and publish to pipeline
+      - name: GHASC check # runs right before packaging to fail the pipeline if security issues are found
+        uses: GeekMasher/advanced-security-compliance@v1.5
+        with:
+          policy-path: policies/security-policy.yml
+          token: ${{ secrets.GHASC_TOKEN }} # token requires 'public_repo' and 'security_events' scopes
+
+      # Artifact generation
 
       - name: Publish project for each target framework
         shell: pwsh
         run: |
           $pathToProject = ""
           $configurationSetting = "Debug"
-          $publishOutputFolder = "Publish outputs"
+          $publishOutputFolder = "${{ env.publishOutputFolderName }}"
           $projectVersion = "${{ steps.version_determiner.outputs.project_version }}"
           $targetFrameworksProperty = [String](([xml](Get-Content -Path $pathToProject)).Project.PropertyGroup.TargetFrameworks)
           $targetFrameworks = $targetFrameworksProperty.split(';')
@@ -154,18 +157,12 @@ jobs:
             -property:VersionSuffix=$githubRunNumber
           }
 
-      - name: Upload publish output as pipeline artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: Publish outputs
-          path: 'Publish outputs/'
-
       - name: Pack solution
         shell: pwsh
         run: |
-          $pathToSolution = ""
+          $pathToSolution = "${{ env.pathToSolution }}"
           $configurationSetting = "Release"
-          $packOutputFolder = "NuGet"
+          $packOutputFolder = "${{ env.nugetPackagesFolderName }}"
           $projectVersion = "${{ steps.version_determiner.outputs.project_version }}"
           $githubRunNumber = ${{ github.run_number }}
 
@@ -176,11 +173,25 @@ jobs:
           -property:VersionPrefix=$projectVersion `
           -property:VersionSuffix=$githubRunNumber
 
+      # Artifact publish to pipeline
+
+      - name: Upload test results as pipeline artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: Test results
+          path: "${{ env.testResultsFolderName }}"
+
+      - name: Upload publish output as pipeline artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: Publish outputs
+          path: "${{ env.publishOutputFolderName }}"
+
       - name: Upload NuGet packages as pipeline artifact
         uses: actions/upload-artifact@v2
         with:
           name: NuGet packages
-          path: NuGet/
+          path: "${{ env.nugetPackagesFolderName }}"
 
   cd:
     if: needs.ci.outputs.latest_version != ''
@@ -196,7 +207,7 @@ jobs:
       - name: Install .NET SDK
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 5.0.203
+          dotnet-version: 5.0.302
 
       - name: Install/Update 7z
         shell: pwsh
@@ -210,41 +221,50 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: NuGet packages
-          path: NuGet/
+          path: "${{ needs.ci.outputs.nugetPackagesFolderName }}"
 
       - name: Push NuGet packages to NuGet.org
         continue-on-error: true
         shell: pwsh
         run: |
-          $packagePath = "NuGet/.${{ needs.ci.outputs.latest_version }}.nupkg"
+          $nugetPackagesFolder = "${{ needs.ci.outputs.nugetPackagesFolderName }}"
           $nugetSource = "https://api.nuget.org/v3/index.json"
           $nugetApiKey = "${{ secrets.NUGET_API_KEY }}"
 
-          dotnet nuget push $packagePath `
-          --source $nugetSource `
-          --api-key $nugetApiKey
+          Push-Location $nugetPackagesFolder
+          Get-ChildItem *.nupkg | ForEach-Object {
+            dotnet nuget push $_.FullName `
+            --source $nugetSource `
+            --api-key $nugetApiKey
+          }
 
       # GitHub release preparation and publish
 
       - name: Download and extract assemblies artifact
         uses: actions/download-artifact@v2
         with:
-          name: Publish outputs
-          path: 'Publish outputs/'
+          name: Publish output
+          path: "${{ needs.ci.outputs.publishOutputFolderName }}"
 
       - name: Archive assemblies for release
         shell: pwsh
         run: |
-          cd './Publish outputs'
-          7z a '${{ github.workspace }}/ ${{ needs.ci.outputs.latest_version }} Assemblies.7z' .
+          $publishOutputFolder = "${{ needs.ci.outputs.publishOutputFolderName }}"
+          $latestVersion = "${{ needs.ci.outputs.latest_version }}"
+          $assembliesArchiveTitle = " $latestVersion Assemblies.7z"
+
+          Push-Location "./$publishOutputFolder"
+          7z a "${{ github.workspace }}/$assembliesArchiveTitle" .
 
       - name: Create and publish release
         shell: pwsh
         run: |
-          $releaseTag = "${{ needs.ci.outputs.latest_version }}"
-          $releaseTitle = " ${{ needs.ci.outputs.latest_version }}"
+          $nugetPackagesFolder = "${{ needs.ci.outputs.nugetPackagesFolderName }}"
+          $latestVersion = "${{ needs.ci.outputs.latest_version }}"
+          $releaseTag = $latestVersion
+          $releaseTitle = " $latestVersion"
           $releaseNotes = ""
-          $releaseAssets = "NuGet/.${{ needs.ci.outputs.latest_version }}.nupkg", "NuGet/.${{ needs.ci.outputs.latest_version }}.snupkg", " ${{ needs.ci.outputs.latest_version }} Assemblies.7z"
+          $releaseAssets = "$nugetPackagesFolder/.$latestVersion.nupkg", "$nugetPackagesFolder/.$latestVersion.snupkg", "$releaseTitle Assemblies.7z"
 
           gh release create $releaseTag `
           --title $releaseTitle `

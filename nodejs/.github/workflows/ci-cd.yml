@@ -123,6 +123,14 @@ jobs:
           name: Logs ${{ matrix.node-version }}
           path: logs/
 
+      # GitHub Advanced Security Compliance
+
+      - name: GHASC check # runs right before deployment to fail the pipeline if security issues are found
+        uses: GeekMasher/advanced-security-compliance@v1.5
+        with:
+          policy-path: policies/security-policy.yml
+          token: ${{ secrets.GHASC_TOKEN }} # token requires 'public_repo' and 'security_events' scopes
+
   cd:
     if: needs.build.outputs.should_deploy == 'true'
     name: Continuous Deployment
