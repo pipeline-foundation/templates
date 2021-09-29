@@ -1,5 +1,6 @@
 {
 	"name": "devcontainer",
+	"image": "/PROJECTNAME-devcontainer:1.0.0",
 	"settings": {
 		"workbench.colorTheme": "Default Dark+",
 		"terminal.integrated.defaultProfile.linux": "bash"
@@ -20,7 +21,5 @@
 		"ms-vscode.vscode-typescript-next",
 		"ecmel.vscode-html-css",
 	],
-	"build": {
-		"dockerfile": "Dockerfile"
-	}
+	"postCreateCommand": "",
 }

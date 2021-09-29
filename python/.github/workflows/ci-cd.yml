@@ -6,31 +6,28 @@ jobs:
   ci:
     name: Continuous Integration
     runs-on: ubuntu-20.04
+    container: ${{ secrets.DOCKERHUB_USERNAME }}/PROJECTNAME-runner:ci-${{ matrix.python-version }}
     outputs:
       package_version: ${{ steps.proj_ver_determiner.outputs.package_version }}
       package_version_tag: ${{ steps.proj_ver_determiner.outputs.package_version_tag }}
       latest_github_tag: ${{ steps.proj_ver_determiner.outputs.latest_github_tag }}
       should_deploy: ${{ steps.proj_ver_determiner.outputs.should_deploy }}
+    strategy:
+      matrix:
+        python-version: [ 2.7, 3.6, 3.7, 3.8, 3.9, 3.10 ]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      # Tooling setup
-
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.9
-
-      - name: Install Python tools
+      - name: Clone repository
+        shell: bash
         run: |
-          python3 -m pip install --upgrade pip
-          pip install flake8 wheel pytest
+          git config --global http.sslverify false
+          git clone https://github.com/${{ github.repository }}.git .
 
       # Information setup
 
-      - name: Pipeline data gatherer
+      - if: matrix.python-version == '3.9'
+        name: Pipeline data gatherer
         id: data_gatherer
+        shell: bash
         run: |
           # Get default branch
           REPO="${{ github.repository }}"
@@ -38,8 +35,10 @@ jobs:
 
           echo "::set-output name=default_branch::$(echo $DEFAULT_BRANCH)"
 
-      - name: Pipeline conditionals handler
+      - if: matrix.python-version == '3.9'
+        name: Pipeline conditionals handler
         id: conditionals_handler
+        shell: bash
         run: |
           DEFAULT_BRANCH="${{ steps.data_gatherer.outputs.default_branch }}"
           GITHUB_REF="${{ github.ref }}"
@@ -63,29 +62,23 @@ jobs:
           echo "::set-output name=is_push::$(echo $IS_PUSH)"
           echo "::set-output name=is_push_to_default_branch::$(echo $IS_PUSH_TO_DEFAULT_BRANCH)"
 
-      - if: steps.conditionals_handler.outputs.is_push_to_default_branch == 'true'
+      - if: steps.conditionals_handler.outputs.is_push_to_default_branch == 'true' && matrix.python-version == '3.9'
         name: Project version/deploy determiner
         id: proj_ver_determiner
+        shell: bash
         run: |
           git fetch --all --tags
 
-          PACKAGE_VERSION=$(cat setup.py \
-            | grep version \
-            | sed 's/[version=", ]//g')
+          ORIGINAL_REPO="OWNER/PROJECTNAME"
+          CURRENT_REPO="${{ github.repository }}"
+          PACKAGE_VERSION=$(python3.9 setup.py --version)
           PACKAGE_VERSION_TAG=`echo v$PACKAGE_VERSION | sed -e 's/[[:space:]]//'`
           LATEST_GITHUB_TAG=`echo $(git tag | sort --version-sort | tail -n1)`
+          IS_NEW_VERSION=$(python3.9 -c "import sys, packaging.version as v;p=v.parse;s=sys.argv;a=p(s[1]);b=p(s[2]);print((a>b)-(a<b))" $PACKAGE_VERSION_TAG $LATEST_GITHUB_TAG)
           SHOULD_DEPLOY="false"
 
-          # download semver compare tool
-          curl https://raw.githubusercontent.com/Ariel-Rodriguez/sh-semversion-2/main/semver2.sh -o semver2.sh
-          chmod +x semver2.sh
-
-          if [ -z "$LATEST_GITHUB_TAG" ]; then
+          if [ "$CURRENT_REPO" == "$ORIGINAL_REPO" ] && [ -z "$LATEST_GITHUB_TAG" ] || [ $IS_NEW_VERSION == 1 ]; then
             SHOULD_DEPLOY="true"
-          else 
-            if [ `echo $(./semver2.sh $PACKAGE_VERSION_TAG $LATEST_GITHUB_TAG)` = 1 ]; then
-              SHOULD_DEPLOY="true"
-            fi
           fi
 
           echo "::set-output name=package_version::$(echo $PACKAGE_VERSION)"
@@ -96,17 +89,18 @@ jobs:
       # Code validations and logs generation
 
       - name: Create logs directory
+        shell: bash
         run: |
-          mkdir -p logs
+          mkdir -p "Python ${{ matrix.python-version }} - logs"
 
-      - name: Install requirements
+      - name: Install requirements for Python ${{ matrix.python-version }}
+        shell: bash
         run: |
           REQS_FILE="requirements.txt"
+          PYTHON_VERSION="${{ matrix.python-version }}"
 
-          if [ -f $REQS_FILE ]; then 
-            pip install -r $REQS_FILE 2>&1 | tee logs/requirements.log
-            exit ${PIPESTATUS[0]} # without this explicit exit code return, even if the previous command fails, the step won't return error because of 'tee'
-          fi
+          pip install -r $REQS_FILE 2>&1 | tee "Python $PYTHON_VERSION - logs/requirements.log"
+          exit ${PIPESTATUS[0]} # without this explicit exit code return, even if the previous command fails, the step won't return error because of 'tee'
 
       - name: Upload requirements log as artifact
         uses: actions/upload-artifact@v2
@@ -114,27 +108,23 @@ jobs:
           name: requirements-log
           path: logs/requirements.log
 
-      - name: Lint with flake8
+      - if: matrix.python-version == '3.9'
+        name: Lint with flake8
+        shell: bash
         run: |
-          flake8 . --max-line-length=139 2>&1 | tee logs/flake8.log
-          exit ${PIPESTATUS[0]}
-
-      - name: Upload flake8 log as artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: flake8-log
-          path: logs/flake8.log
+          flake8 PROJECTNAME/** --max-line-length=199
 
       - name: Run tests with pytest
+        shell: bash
         run: |
-          pytest 2>&1 | tee logs/pytest.log
+          pytest 2>&1 | tee "Python ${{ matrix.python-version }} - logs/pytest.log"
           exit ${PIPESTATUS[0]}
 
       - name: Upload pytest log as artifact
         uses: actions/upload-artifact@v2
         with:
-          name: pytest-log
-          path: logs/pytest.log
+          name: Python ${{ matrix.python-version }} - pytest-log
+          path: "Python ${{ matrix.python-version }} - logs/pytest.log"
 
       # GitHub Advanced Security Compliance
 
@@ -146,11 +136,14 @@ jobs:
 
       # Package application
 
-      - name: Package application
+      - if: matrix.python-version == '3.9'
+        name: Package application
+        shell: bash
         run: |
-          python3 setup.py sdist bdist_wheel
+          python3.9 setup.py sdist bdist_wheel
 
-      - name: Upload packages as artifact
+      - if: matrix.python-version == '3.9'
+        name: Upload packages as artifact
         uses: actions/upload-artifact@v2
         with:
           name: Packages
@@ -161,21 +154,12 @@ jobs:
     name: Continuous Deployment
     needs: ci
     runs-on: ubuntu-20.04
+    container: ${{ secrets.DOCKERHUB_USERNAME }}/PROJECTNAME-runner:cd-3.9
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      # Tooling setup
-
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.9
-
-      - name: Install deployment tools
+      - name: Clone repository
         run: |
-          python3 -m pip install --upgrade pip
-          pip install twine
+          git config --global http.sslverify false
+          git clone https://token:${{ secrets.GIT_REPO_TOKEN }}@github.com/${{ github.repository }}.git .
 
       # Download CI artifacts
 

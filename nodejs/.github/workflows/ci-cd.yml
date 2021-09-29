@@ -6,29 +6,26 @@ jobs:
   ci:
     name: Continuous Integration
     runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-        node-version: [ 12.x, 14.x, 16.x ]
+    container: ${{ secrets.DOCKERHUB_USERNAME }}/PROJECTNAME-runner:ci-${{ matrix.node-version }}
     outputs:
       package_version: ${{ steps.proj_ver_determiner.outputs.package_version }}
       package_version_tag: ${{ steps.proj_ver_determiner.outputs.package_version_tag }}
       latest_github_tag: ${{ steps.proj_ver_determiner.outputs.latest_github_tag }}
       should_deploy: ${{ steps.proj_ver_determiner.outputs.should_deploy }}
+    strategy:
+      matrix:
+        node-version: [ 12.x, 14.x, 16.x ]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      # Tooling setup
-
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v2
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+      - name: Clone repository
+        shell: bash
+        run: |
+          git config --global http.sslverify false
+          git clone https://github.com/${{ github.repository }}.git .
 
       # Information setup
 
-      - name: Pipeline data gatherer
+      - if: matrix.node-version == '16.x'
+        name: Pipeline data gatherer
         id: data_gatherer
         run: |
           # Get default branch
@@ -37,7 +34,8 @@ jobs:
 
           echo "::set-output name=default_branch::$(echo $DEFAULT_BRANCH)"
 
-      - name: Pipeline conditionals handler
+      - if: matrix.node-version == '16.x'
+        name: Pipeline conditionals handler
         id: conditionals_handler
         run: |
           DEFAULT_BRANCH="${{ steps.data_gatherer.outputs.default_branch }}"
@@ -62,12 +60,14 @@ jobs:
           echo "::set-output name=is_push::$(echo $IS_PUSH)"
           echo "::set-output name=is_push_to_default_branch::$(echo $IS_PUSH_TO_DEFAULT_BRANCH)"
 
-      - if: steps.conditionals_handler.outputs.is_push_to_default_branch == 'true'
+      - if: steps.conditionals_handler.outputs.is_push_to_default_branch == 'true' && matrix.node-version == '16.x'
         name: Project version/deploy determiner
         id: proj_ver_determiner
         run: |
           git fetch --all --tags
 
+          ORIGINAL_REPO="OWNER/PROJECTNAME"
+          CURRENT_REPO="${{ github.repository }}"
           PACKAGE_VERSION=$(cat package.json \
             | grep version \
             | head -1 \
@@ -81,12 +81,8 @@ jobs:
           curl https://raw.githubusercontent.com/Ariel-Rodriguez/sh-semversion-2/main/semver2.sh -o semver2.sh
           chmod +x semver2.sh
 
-          if [ -z "$LATEST_GITHUB_TAG" ]; then
+          if [ "$CURRENT_REPO" == "$ORIGINAL_REPO" ] && [ -z "$LATEST_GITHUB_TAG" ] || [ `echo $(./semver2.sh $PACKAGE_VERSION_TAG $LATEST_GITHUB_TAG)` = 1 ]; then
             SHOULD_DEPLOY="true"
-          else 
-            if [ `echo $(./semver2.sh $PACKAGE_VERSION_TAG $LATEST_GITHUB_TAG)` = 1 ]; then
-              SHOULD_DEPLOY="true"
-            fi
           fi
 
           echo "::set-output name=package_version::$(echo $PACKAGE_VERSION)"
@@ -125,7 +121,8 @@ jobs:
 
       # GitHub Advanced Security Compliance
 
-      - name: GHASC check # runs right before deployment to fail the pipeline if security issues are found
+      - if: matrix.node-version == '16.x'
+        name: GHASC check # runs right before deployment to fail the pipeline if security issues are found
         uses: GeekMasher/advanced-security-compliance@v1.5
         with:
           policy-path: policies/security-policy.yml
@@ -136,32 +133,24 @@ jobs:
     name: Continuous Deployment
     needs: ci
     runs-on: ubuntu-20.04
+    container: ${{ secrets.DOCKERHUB_USERNAME }}/PROJECTNAME-runner:cd-16.x
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      # Tooling setup
-
-      - name: Use Node.js 16.x
-        uses: actions/setup-node@v2
-        with:
-          node-version: 16.x
+      - name: Clone repository
+        run: |
+          git config --global http.sslverify false
+          git clone https://token:${{ secrets.GIT_REPO_TOKEN }}@github.com/${{ github.repository }}.git .
 
       # Package deploy
 
-      # - name: Deploy to npm
-      #   run: |
-      #     echo $'registry=https://registry.npmjs.org/\n' //registry.npmjs.org/:_authToken=${NPM_TOKEN} > .npmrc
+      - name: Deploy to npm
+        run: |
+          echo $'registry=https://registry.npmjs.org/\n' //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }} > .npmrc
 
-      #     npm ci
+          npm ci
 
-      #     npm publish --access public
+          npm publish --access public
 
-      #     rm -f .npmrc
-      #   env:
-      #     NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          rm -f .npmrc
 
       # GitHub deploy
 
@@ -174,22 +163,22 @@ jobs:
           git tag $GITHUB_TAG
           git push origin --tags
 
-      # - name: Create and publish release
-      #   run: |
-      #     RELEASE_TAG="${{ needs.build.outputs.package_version_tag }}"
-      #     PREVIOUS_TAG="${{ needs.build.outputs.latest_github_tag }}"
-      #     RELEASE_TITLE="$RELEASE_TAG"
-      #     START_LINE=$(( $( grep -n "## $RELEASE_TAG" CHANGELOG.md | grep -Eo '^[^:]+' ) + 2 ))
-      #     END_LINE=$(( $( grep -n "## $PREVIOUS_TAG" CHANGELOG.md | grep -Eo '^[^:]+' ) - 2 ))
-      #     RELEASE_NOTES=$(echo $'### Changelog:\n\n' "$( sed -n "$START_LINE,$END_LINE"p CHANGELOG.md )")
-      #     RELEASE_ASSETS="" # list the relative paths to the files separated by a single space
+      - name: Create and publish release
+        run: |
+          RELEASE_TAG="${{ needs.build.outputs.package_version_tag }}"
+          PREVIOUS_TAG="${{ needs.build.outputs.latest_github_tag }}"
+          RELEASE_TITLE="$RELEASE_TAG"
+          START_LINE=$(( $( grep -n "## $RELEASE_TAG" CHANGELOG.md | grep -Eo '^[^:]+' ) + 2 ))
+          END_LINE=$(( $( grep -n "## $PREVIOUS_TAG" CHANGELOG.md | grep -Eo '^[^:]+' ) - 2 ))
+          RELEASE_NOTES=$(echo $'### Changelog:\n\n' "$( sed -n "$START_LINE,$END_LINE"p CHANGELOG.md )")
+          RELEASE_ASSETS="" # list the relative paths to the files separated by a single space
 
-      #     gh release create $RELEASE_TAG \
-      #     --title $RELEASE_TITLE \
-      #     --notes "$RELEASE_NOTES" \
-      #     $RELEASE_ASSETS
-      #   env:
-      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          gh release create $RELEASE_TAG \
+          --title $RELEASE_TITLE \
+          --notes "$RELEASE_NOTES" \
+          $RELEASE_ASSETS
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # - name: Deploy app to Heroku
       #   uses: akhileshns/heroku-deploy@v3.12.12
