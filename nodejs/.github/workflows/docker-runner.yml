@@ -1,4 +1,4 @@
-name: Docker runner image
+name: GitHub Actions runner image
 
 on:
   push:

@@ -6,8 +6,9 @@ jobs:
   ci:
     name: Continuous Integration
     runs-on: ubuntu-20.04
+    container: ${{ secrets.DOCKERHUB_USERNAME }}/PROJECTNAME-runner:ci-${{ matrix.dotnet-version }}
     env:
-      pathToSolution: Microsoft.Diagnostics.Runtime.sln
+      pathToSolution: .sln
       testResultsFolderName: Test results
       publishOutputFolderName: Publish output
       nugetPackagesFolderName: NuGet packages
@@ -15,22 +16,20 @@ jobs:
       latest_version: ${{ steps.tag_generator.outputs.new_version }}
       publishOutputFolderName: ${{ env.publishOutputFolderName }}
       nugetPackagesFolderName: ${{ env.nugetPackagesFolderName }}
+    strategy:
+      matrix:
+        dotnet-version: [ 3.1, 5.0 ]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      # Tooling setup
-
-      - name: Install .NET SDK
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 5.0.302
+      - name: Clone repository
+        shell: bash
+        run: |
+          git config --global http.sslverify false
+          git clone https://github.com/${{ github.repository }}.git .
 
       # Information setup
 
-      - name: Pipeline data gatherer
+      - if: matrix.dotnet-version == '5.0'
+        name: Pipeline data gatherer
         id: data_gatherer
         shell: pwsh
         run: |
@@ -40,7 +39,8 @@ jobs:
 
           Write-Output "::set-output name=default_branch::$(echo $defaultBranch)"
 
-      - name: Pipeline conditionals handler
+      - if: matrix.dotnet-version == '5.0'
+        name: Pipeline conditionals handler
         id: conditionals_handler
         shell: pwsh
         run: |
@@ -66,7 +66,7 @@ jobs:
           Write-Output "::set-output name=is_push::$(echo $isPush)"
           Write-Output "::set-output name=is_push_to_default_branch::$(echo $isPushToDefaultBranch)"
 
-      - if: steps.conditionals_handler.outputs.is_push_to_default_branch == 'true'
+      - if: steps.conditionals_handler.outputs.is_push_to_default_branch == 'true' && matrix.dotnet-version == '5.0'
         name: GitHub tag generator
         id: tag_generator
         uses: mathieudutour/github-tag-action@v5.5
@@ -76,7 +76,8 @@ jobs:
           release_branches: ${{ steps.data_gatherer.outputs.default_branch }}
           tag_prefix: ''
 
-      - name: Project version determiner
+      - if: matrix.dotnet-version == '5.0'
+        name: Project version determiner
         id: version_determiner
         shell: pwsh
         run: |
@@ -134,7 +135,8 @@ jobs:
 
       # Artifact generation
 
-      - name: Publish project for each target framework
+      - if: matrix.dotnet-version == '5.0'
+        name: Publish project for each target framework
         shell: pwsh
         run: |
           $pathToProject = ""
@@ -157,7 +159,8 @@ jobs:
             -property:VersionSuffix=$githubRunNumber
           }
 
-      - name: Pack solution
+      - if: matrix.dotnet-version == '5.0'
+        name: Pack solution
         shell: pwsh
         run: |
           $pathToSolution = "${{ env.pathToSolution }}"
@@ -198,22 +201,12 @@ jobs:
     name: Continuous Deployment
     needs: ci
     runs-on: ubuntu-20.04
+    container: ${{ secrets.DOCKERHUB_USERNAME }}/PROJECTNAME-runner:cd-5.0
     steps:
-      - name: Checkout repository # GH CLI requires a cloned repo
-        uses: actions/checkout@v2
-
-      # Tooling setup
-
-      - name: Install .NET SDK
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 5.0.302
-
-      - name: Install/Update 7z
-        shell: pwsh
+      - name: Clone repository
         run: |
-          sudo apt update
-          sudo apt install p7zip-full p7zip-rar
+          git config --global http.sslverify false
+          git clone https://token:${{ secrets.GIT_REPO_TOKEN }}@github.com/${{ github.repository }}.git .
 
       # NuGet packages publish
 
@@ -259,10 +252,12 @@ jobs:
       - name: Create and publish release
         shell: pwsh
         run: |
+          # !!! Add CHANGELOG.md to release notes feature !!!
+
           $nugetPackagesFolder = "${{ needs.ci.outputs.nugetPackagesFolderName }}"
           $latestVersion = "${{ needs.ci.outputs.latest_version }}"
           $releaseTag = $latestVersion
-          $releaseTitle = " $latestVersion"
+          $releaseTitle = "$latestVersion"
           $releaseNotes = ""
           $releaseAssets = "$nugetPackagesFolder/.$latestVersion.nupkg", "$nugetPackagesFolder/.$latestVersion.snupkg", "$releaseTitle Assemblies.7z"
 

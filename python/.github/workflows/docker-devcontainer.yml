@@ -1,4 +1,4 @@
-name: Docker devcontainer image
+name: GitHub Codespaces devcontainer image
 
 on:
   push:
