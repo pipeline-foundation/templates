@@ -38,6 +38,4 @@ RUN apt update; \
 
 USER devcontainer
 
-CMD ["bash"]
-
 # Built with ❤ by [Pipeline Foundation](https://pipeline.foundation)
