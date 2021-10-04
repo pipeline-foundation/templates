@@ -21,5 +21,5 @@
 		"ms-vscode.vscode-typescript-next",
 		"ecmel.vscode-html-css",
 	],
-	"postCreateCommand": "",
+	"postCreateCommand": "echo '\n# add python modules to PATH globally\nPATH=$PATH:~/.local/bin/' >> ~/.bashrc",
 }
