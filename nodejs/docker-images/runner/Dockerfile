@@ -18,10 +18,6 @@ RUN set -x; \
 		tar xvf gh_${GH_CLI_VERSION}_linux_amd64.tar.gz; \
 		cp gh_${GH_CLI_VERSION}_linux_amd64/bin/gh /usr/local/bin/; \
 		rm -rf gh_${GH_CLI_VERSION}_linux_amd64 gh_${GH_CLI_VERSION}_linux_amd64.tar.gz; \
-	fi; \
-	# add dev non-root user
-	useradd --shell /bin/bash --create-home runner;
-
-USER runner
+	fi
 	
 # Built with ❤ by [Pipeline Foundation](https://pipeline.foundation)

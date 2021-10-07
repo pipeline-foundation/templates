@@ -22,7 +22,7 @@
 		"ms-vscode.powershell",
 		"jmrog.vscode-nuget-package-manager",
 	],
-	"postCreateCommand": "echo '\n# add python modules to PATH globally\nPATH=$PATH:~/.local/bin/' >> ~/.bashrc",
+	"postCreateCommand": "",
 }
 
 // Built with ❤ by [Pipeline Foundation](https://pipeline.foundation)
