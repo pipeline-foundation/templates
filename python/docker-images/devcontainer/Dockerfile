@@ -1,6 +1,5 @@
 FROM ubuntu:20.04
 
-# argument required by tzdata installation from software-properties-common
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt update; \
