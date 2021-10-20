@@ -29,7 +29,7 @@ jobs:
 
       # Information setup
 
-      - if: matrix.python-version == '3.9'
+      - if: matrix.python-version == '3.10'
         name: Pipeline data gatherer
         id: data_gatherer
         shell: bash
@@ -40,7 +40,7 @@ jobs:
 
           echo "::set-output name=default_branch::$(echo $DEFAULT_BRANCH)"
 
-      - if: matrix.python-version == '3.9'
+      - if: matrix.python-version == '3.10'
         name: Pipeline conditionals handler
         id: conditionals_handler
         shell: bash
@@ -67,7 +67,7 @@ jobs:
           echo "::set-output name=is_push::$(echo $IS_PUSH)"
           echo "::set-output name=is_push_to_default_branch::$(echo $IS_PUSH_TO_DEFAULT_BRANCH)"
 
-      - if: steps.conditionals_handler.outputs.is_push_to_default_branch == 'true' && matrix.python-version == '3.9'
+      - if: steps.conditionals_handler.outputs.is_push_to_default_branch == 'true' && matrix.python-version == '3.10'
         name: Project version/deploy determiner
         id: proj_ver_determiner
         shell: bash
@@ -76,10 +76,10 @@ jobs:
 
           ORIGINAL_REPO="OWNER/PROJECTNAME"
           CURRENT_REPO="${{ github.repository }}"
-          PACKAGE_VERSION=$(python3.9 setup.py --version)
+          PACKAGE_VERSION=$(python3.10 setup.py --version)
           PACKAGE_VERSION_TAG=`echo v$PACKAGE_VERSION | sed -e 's/[[:space:]]//'`
           LATEST_GITHUB_TAG=`echo $(git tag | sort --version-sort | tail -n1)`
-          IS_NEW_VERSION=$(python3.9 -c "import sys, packaging.version as v;p=v.parse;s=sys.argv;a=p(s[1]);b=p(s[2]);print((a>b)-(a<b))" $PACKAGE_VERSION_TAG $LATEST_GITHUB_TAG)
+          IS_NEW_VERSION=$(python3.10 -c "import sys, packaging.version as v;p=v.parse;s=sys.argv;a=p(s[1]);b=p(s[2]);print((a>b)-(a<b))" $PACKAGE_VERSION_TAG $LATEST_GITHUB_TAG)
           SHOULD_DEPLOY="false"
 
           if [ "$CURRENT_REPO" == "$ORIGINAL_REPO" ] && [ -z "$LATEST_GITHUB_TAG" ] || [ $IS_NEW_VERSION == 1 ]; then
@@ -113,7 +113,7 @@ jobs:
           name: requirements-log
           path: logs/requirements.log
 
-      - if: matrix.python-version == '3.9'
+      - if: matrix.python-version == '3.10'
         name: Lint with flake8
         shell: bash
         run: |
@@ -133,7 +133,8 @@ jobs:
 
       # GitHub Advanced Security Compliance
 
-      - name: GHASC check # runs right before packaging to fail the pipeline if security issues are found
+      - if: matrix.python-version == '3.10'
+        name: GHASC check # runs right before packaging to fail the pipeline if security issues are found
         uses: GeekMasher/advanced-security-compliance@v1.5
         with:
           policy-path: policies/security-policy.yml
@@ -141,13 +142,13 @@ jobs:
 
       # Package application
 
-      - if: matrix.python-version == '3.9'
+      - if: matrix.python-version == '3.10'
         name: Package application
         shell: bash
         run: |
-          python3.9 setup.py sdist bdist_wheel
+          python3.10 setup.py sdist bdist_wheel
 
-      - if: matrix.python-version == '3.9'
+      - if: matrix.python-version == '3.10'
         name: Upload packages as artifact
         uses: actions/upload-artifact@v2
         with:
@@ -159,7 +160,7 @@ jobs:
     name: Continuous Deployment
     needs: ci
     runs-on: ubuntu-20.04
-    container: ${{ secrets.DOCKERHUB_USERNAME }}/PROJECTNAME-runner:cd-3.9
+    container: ${{ secrets.DOCKERHUB_USERNAME }}/PROJECTNAME-runner:cd-3.10
     steps:
       - name: Clone repository
         run: |
