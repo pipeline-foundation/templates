@@ -1,0 +1,24 @@
+name: ''
+description: ''
+inputs:
+  input-1:  # id of input
+    description: ''
+    required: true
+    default: ''
+outputs:
+  output-1:
+    description: ""
+    value: ${{ steps.step-1.outputs.output-1 }}
+runs:
+  using: "composite"
+  steps:
+    - name: Step consuming input
+      shell: bash
+      run: |
+        echo Hello ${{ inputs.input-1 }}
+
+    - name: Step generating output
+      id: step-1
+      shell: bash
+      run: |
+        echo "::set-output name=output-1::$(echo '')"
