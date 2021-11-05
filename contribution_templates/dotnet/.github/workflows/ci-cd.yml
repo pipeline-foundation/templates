@@ -2,8 +2,10 @@ name: CI/CD Pipeline
 
 on:
   push:
-    tags-ignore:
+    branches:
       - '**'
+    tags:
+      - '!**'
   pull_request:
   workflow_dispatch:
 

@@ -2,9 +2,12 @@ name: CodeQL Analysis
 
 on:
   push:
+    branches:
+      - '**'
     # ignore dependabot branches on push -> https://github.com/microsoft/binskim/issues/425#issuecomment-893373709
-    branches-ignore:
-      - 'dependabot/**'
+      - '!dependabot/**'
+    tags:
+      - '!**'
   pull_request:
   schedule:
     - cron: '0 8 * * *'
