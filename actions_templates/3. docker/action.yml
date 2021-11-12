@@ -1,15 +1,20 @@
 name: ''
 description: ''
 inputs:
-  input-1:  # id of input
+  input:  # id of input
     description: ''
     required: true
     default: ''
 outputs:
-  output-2: # id of output
+  output: # id of output
     description: ''
+branding:
+  icon: 'git-branch'
+  color: 'blue'
 runs:
   using: 'docker'
   image: 'Dockerfile'
   args:
     - ${{ inputs.input-1 }}
+
+# if JS, run npm init -y in the root folder of the repository

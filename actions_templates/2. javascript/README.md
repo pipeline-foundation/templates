@@ -1,21 +1,47 @@
-# ActionName
+# Action name
 
-This action prints "Hello World" or "Hello" + the name of a person to greet to the log.
+Description
 
 ## Inputs
 
-## `NameOfInput`
+### `input`
 
-**Required** DescriptionOfInput.
+Description
+
+**Default**: value
 
 ## Outputs
 
-## `NameOfOutput`
+### `output`
 
-DescriptionOfOutput.
+Description
 
-## Example usage
+## Usage
 
-uses: actions/name-of-action@v1.1
-with:
-  name_of_input: "World"
+#### 1. Default action usage
+- Description
+
+```
+  code
+```
+
+#### 2. Custom action usage
+- Description
+
+```
+  code
+```
+
+#### 3. Consuming the output
+- to consume the output, use the following reference:
+```
+  code
+```
+- example:
+```
+  code
+```
+
+## Contributing
+
+Thank you for considering a contribution! Please check out our detailed [contribution guide](./CONTRIBUTING.md) to learn more about how to help us improve the project.

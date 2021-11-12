@@ -8,6 +8,9 @@ inputs:
 outputs:
   output-2: # id of output
     description: ''
+branding:
+  icon: ''
+  color: ''
 runs:
   using: 'node12'
   main: 'dist/index.js'
